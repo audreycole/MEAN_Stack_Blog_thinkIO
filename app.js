@@ -6,7 +6,12 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 
+// Connect to mongodb
 mongoose.connect('mongodb://localhost/news');
+
+// Get the models
+require('./models/Posts');
+require('./models/Comments');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
