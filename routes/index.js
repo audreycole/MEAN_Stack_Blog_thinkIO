@@ -50,12 +50,12 @@ router.param('post', function(request, response, next, id) {
 router.param('comment', function(request, response, next, id) {
 	var query = Comment.findById(id);
 
-	query.exec(function(err, post) {
+	query.exec(function(err, comment) {
 		if(err) { return next(err); }
-		// If the post isn't there, create an error for it
-		if(!post) { return next(new Error("can't find comment!")); }
+		// If the comment isn't there, create an error for it
+		if(!comment) { return next(new Error("can't find comment!")); }
 
-		request.post = post;
+		request.comment = comment;
 		return next();
 	})
 });
@@ -78,6 +78,8 @@ router.put('/posts/:post/upvote', function(request, response, next) {
 
 /* PUT an upvote on for a comment */
 router.put('/posts/:post/comments/:comment/upvote', function(request, response, next) {
+	//console.log(request.params.post + " " + request.params.comment);
+
 	request.comment.upvote(function(err, comment) {
 		if(err) { return next(err); }
 		response.json(comment);
@@ -92,11 +94,11 @@ router.post('/posts/:post/comments', function(request, response, next) {
 	comment.save(function(err, comment) {
 		if(err) { return next(err); }
 
-		request.post.comments.push(comment);
-		request.post.save(function(err, post) {
+		request.post.comments.push(comment); // Add it to the current list of comments for this post
+		request.post.save(function(err, post) { // Save to database
 			if(err) { return next(err); }
-
-			response.json(comments);
+			// Return the new comment we posted
+			response.json(comment);
 		});
 	});
 });
