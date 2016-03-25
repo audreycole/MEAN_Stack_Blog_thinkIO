@@ -23,7 +23,13 @@ function($stateProvider, $urlRouterProvider) {
     .state('posts', {
       url: '/posts/{id}',
       templateUrl: '/posts.html', 
-      controller: 'PostsCtrl'
+      controller: 'PostsCtrl',
+      // Load comments before page loads
+      resolve: {
+        post: ['$stateParams', 'posts', function($stateParams, posts) {
+          return posts.get($stateParams.id);
+        }]
+      }
     });
 
   $urlRouterProvider.otherwise('home');
@@ -39,6 +45,13 @@ app.factory('posts', ['$http', function($http) {
   o.getAll = function() {
     return $http.get('/posts').success(function(data) {
       angular.copy(data, o.posts); // copy data into o.posts
+    });
+  }
+
+  /* GET one post by id (from mongodb, not index in array anymore) */
+  o.get = function(id) {
+    return $http.get('/posts/' + id).then(function(response) {
+      return response.data;
     });
   }
 
@@ -96,10 +109,13 @@ function($scope, posts){
 }]);
 
 /*Posts Controller */
-app.controller('PostsCtrl', ['$scope', '$stateParams','posts', 
+// Add in post so we can access post database methods
+app.controller('PostsCtrl', ['$scope', '$stateParams','posts', 'post',
 
-function($scope, $stateParams, posts) {
-  $scope.post = posts.posts[$stateParams.id];
+function($scope, $stateParams, posts, post) {
+  
+  //$scope.post = posts.posts[$stateParams.id];
+  $scope.post = post;
 
   $scope.addComment = function(){
     if($scope.body == "") {return;}
