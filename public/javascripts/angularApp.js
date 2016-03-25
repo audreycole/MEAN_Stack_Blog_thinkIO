@@ -49,6 +49,14 @@ app.factory('posts', ['$http', function($http) {
     }) 
   }
 
+  /* Upvote a post (make call to database) */
+  o.upvote = function(post) {
+    return $http.put('/posts/' + post._id + '/upvote').success(function(data) {
+      post.upvotes += 1;
+    });
+  }
+
+
   return o;
 }]);
 
@@ -81,7 +89,8 @@ function($scope, posts){
   }
 
   $scope.incrementUpvotes = function(post) {
-    post.upvotes += 1;
+    //post.upvotes += 1;
+    posts.upvote(post); // Call upvote function to hit database
   }
 
 }]);
