@@ -11,7 +11,13 @@ function($stateProvider, $urlRouterProvider) {
     .state('home', {
       url: '/home',
       templateUrl: '/home.html',
-      controller: 'MainCtrl'
+      controller: 'MainCtrl',
+      // Load posts before page loads
+      resolve: {
+        postPromise: ['posts', function(posts) {
+          return posts.getAll();
+        }]
+      }
     })
 
     .state('posts', {
@@ -24,10 +30,25 @@ function($stateProvider, $urlRouterProvider) {
 }]);
 
 /* Create a Factory for posts so we can access it anywhere, and only have on copy */
-app.factory('posts', [function() {
+app.factory('posts', ['$http', function($http) {
   var o = {
     posts: []
   }
+
+  /* Load all of the posts (GET '/posts') by hitting the server and then coming back and returning result to us */
+  o.getAll = function() {
+    return $http.get('/posts').success(function(data) {
+      angular.copy(data, o.posts); // copy data into o.posts
+    });
+  }
+
+  /* Create a post that will be added to our database (POST '/posts') */
+  o.create = function(post) {
+    return $http.post('/posts', post).success(function(data) { // POST to database
+      o.posts.push(data); // add this to current lists of posts
+    }) 
+  }
+
   return o;
 }]);
 
@@ -43,11 +64,17 @@ function($scope, posts){
   //Create a $scope function that will add an object into the posts array (through posts service)
   $scope.addPost = function(){
     if($scope.title == "") {return;}
-    $scope.posts.push({
+    /*$scope.posts.push({
       title: $scope.title, 
       link: $scope.link, 
       upvotes: 4, 
       comments: [{author: 'Joe', body: 'Cool Post!', upvotes: 0}, {author: 'Bob', body: 'Great idea, but everything is wrong!', upvotes: 0}]
+    });*/
+
+    // Call create function to hit database 
+    posts.create({
+      title: $scope.title,
+      link: $scope.link
     });
     $scope.title = ''; // Reset to empty string
     $scope.link = '';

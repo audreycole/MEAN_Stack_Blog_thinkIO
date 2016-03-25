@@ -13,7 +13,7 @@ var Comment = mongoose.model('Comment');
 
 /* GET request for all of our posts */
 router.get('/posts', function(request, response, next){
-	Post.find(function(err) {
+	Post.find(function(err, posts) {
 		if(err) { next(err); }
 		// take result and send it back to client in json format
 		response.json(posts); 
@@ -62,7 +62,10 @@ router.param('comment', function(request, response, next, id) {
 
 /* GET request for returning a single post */
 router.get('/posts/:post', function(request, response) {
-	response.json(request.post);
+	/* use populate method to grab comments for posts as well */
+	request.post.populate('comments', function(err, post) {
+		response.json(post);
+	});
 });
 
 /* PUT an upvote on for a post */
@@ -78,7 +81,7 @@ router.put('/posts/:post/comments/:comment/upvote', function(request, response, 
 	request.comment.upvote(function(err, comment) {
 		if(err) { return next(err); }
 		response.json(comment);
-	})
+	});
 });
 
 /* POST a comment */
