@@ -1,5 +1,7 @@
 var express = require('express');
+var jwt = require('express-jwt');
 var router = express.Router();
+var auth = jwt({secret: 'SECRET', userProperty: 'payload'});
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -8,8 +10,46 @@ router.get('/', function(req, res, next) {
 
 /* require mongoose to access database */
 var mongoose = require('mongoose');
+var passport = require('passport');
 var Post = mongoose.model('Post');
 var Comment = mongoose.model('Comment');
+var User = mongoose.model('User');
+
+/* POST route for registering as a user */
+router.post('/register', function(req, res, next){
+  if(!req.body.username || !req.body.password){
+    return res.status(400).json({message: 'Please fill out all fields'});
+  }
+
+  var user = new User();
+
+  user.username = req.body.username;
+
+  user.setPassword(req.body.password)
+
+  user.save(function (err){
+    if(err){ return next(err); }
+
+    return res.json({token: user.generateJWT()})
+  });
+});
+
+/* POST route for logging in a user */
+router.post('/login', function(req, res, next){
+  if(!req.body.username || !req.body.password){
+    return res.status(400).json({message: 'Please fill out all fields'});
+  }
+
+  passport.authenticate('local', function(err, user, info){
+    if(err){ return next(err); }
+
+    if(user){
+      return res.json({token: user.generateJWT()});
+    } else {
+      return res.status(401).json(info);
+    }
+  })(req, res, next);
+});
 
 /* GET request for all of our posts */
 router.get('/posts', function(request, response, next){
@@ -21,8 +61,9 @@ router.get('/posts', function(request, response, next){
 });
 
 /* POST route for posting posts */
-router.post('/posts', function(request, response, next) {
+router.post('/posts', auth, function(request, response, next) {
 	var post = new Post(request.body);
+	post.author = request.payload.username;
 
 	// Try to save post to database
 	post.save(function(err, post) {
@@ -69,7 +110,7 @@ router.get('/posts/:post', function(request, response) {
 });
 
 /* PUT an upvote on for a post */
-router.put('/posts/:post/upvote', function(request, response, next) {
+router.put('/posts/:post/upvote', auth, function(request, response, next) {
 	request.post.upvote(function(err, post) {
 		if(err) { return next(err); }
 		response.json(post);
@@ -77,7 +118,7 @@ router.put('/posts/:post/upvote', function(request, response, next) {
 });
 
 /* PUT an upvote on for a comment */
-router.put('/posts/:post/comments/:comment/upvote', function(request, response, next) {
+router.put('/posts/:post/comments/:comment/upvote', auth, function(request, response, next) {
 	//console.log(request.params.post + " " + request.params.comment);
 
 	request.comment.upvote(function(err, comment) {
@@ -87,9 +128,10 @@ router.put('/posts/:post/comments/:comment/upvote', function(request, response, 
 });
 
 /* POST a comment */
-router.post('/posts/:post/comments', function(request, response, next) {
+router.post('/posts/:post/comments', auth, function(request, response, next) {
 	var comment = new Comment(request.body);
 	comment.post = request.post;
+	comment.author = request.payload.username;
 
 	comment.save(function(err, comment) {
 		if(err) { return next(err); }
